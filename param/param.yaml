@@ -1,0 +1,24 @@
+show_image: false
+image_wait_time: 1 # wait key value (milliseconds) for image plotting, zero to step through images
+max_tracked_features: 100
+min_feature_quality: 15 # integer (default: 10)
+min_feature_distance: 20
+feat_filter_disparity: 50 # median disparity from keyframe to compute essential matrix
+klt_window_size: 51
+klt_pyramid_levels: 3
+klt_max_iterations: 50
+klt_max_error: 0.001
+fundamental_matrix_probability: 0.999
+fundamental_matrix_threshold: 3 # pixels away from epipolar line
+
+# Camera calibration parameters
+# https://docs.opencv.org/2.4.13.7/doc/tutorials/calib3d/camera_calibration/camera_calibration.html
+fx: 611.1864013671875 # horizontal focal length (pixels)
+fy: 611.5557861328125 # vertical focal length (pixels)
+cx: 315.83184814453125 # horizontal optical center (pixels)
+cy: 242.1165771484375 # vertical optical center (pixels)
+k1: 0 # first radial distortion coefficient
+k2: 0 # second radial distortion coefficient
+p1: 0 # first tangential distortion coefficient
+p2: 0 # second tangential distortion coefficient
+k3: 0 # third radial distortion coefficient
