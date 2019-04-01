@@ -7,6 +7,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif(NOT CMAKE_BUILD_TYPE)
 set(CMAKE_CXX_FLAGS "-std=c++11 -mavx2 -mfma -fopenmp")
 
+find_package(OpenCV 3 REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(GTest)
 
@@ -17,8 +18,9 @@ include_directories(include/feature_tracker
 add_library(feature_tracker
     src/feature_tracker.cpp
 )
-target_link_libraries(feature_tracker 
+target_link_libraries(feature_tracker
   ${YAML_CPP_LIBRARIES}
+  ${OpenCV_LIBS}
   )
 
 if (${GTEST_FOUND})

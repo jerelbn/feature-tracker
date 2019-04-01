@@ -1,4 +1,5 @@
 #include "feature_tracker/feature_tracker.h"
+#include "feature_tracker/utils.h"
 
 
 namespace tracker
@@ -71,6 +72,7 @@ void FeatureTracker::load(const std::string& filename)
   camera_matrix_.at<double>(2, 2) = 1.0;
 
   // dist_coeff_    (D) is a column vector of 4, 5, or 8 elements (only 5 in this code)
+  dist_coeff_ = cv::Mat(5, 1, CV_64FC1, cv::Scalar(0));
   dist_coeff_.at<double>(0, 0) = k1;
   dist_coeff_.at<double>(1, 0) = k2;
   dist_coeff_.at<double>(2, 0) = p1;

@@ -6,7 +6,6 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/features2d.hpp>
 #include "feature_tracker/feature_tracker.h"
-#include "feature_tracker/utils.h"
 
 static const std::string OPENCV_WINDOW = "Image Window";
 
