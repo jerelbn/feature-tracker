@@ -81,101 +81,6 @@ void FeatureTracker::load(const std::string& filename)
 }
 
 
-// Taken from visual_mtt2 and modified
-void FeatureTracker::createDistortionMask(cv::Size res)
-{
-  // Define undistorted image boundary
-  int num_ppe = 10; // number of points per edge
-  std::vector<cv::Point2f> boundary;
-  for (uint32_t i = 0; i < num_ppe; i++)
-    boundary.emplace_back(cv::Point2f(i*(res.width/num_ppe), 0)); // bottom
-  for (uint32_t i = 0; i < num_ppe; i++)
-    boundary.emplace_back(cv::Point2f(res.width, i*(res.height/num_ppe))); // right
-  for (uint32_t i = 0; i < num_ppe; i++)
-    boundary.emplace_back(cv::Point2f(res.width - i*(res.width/num_ppe), res.height)); // top
-  for (uint32_t i = 0; i < num_ppe; i++)
-    boundary.emplace_back(cv::Point2f(0, res.height - i*(res.height/num_ppe))); // left
-
-  // Project points onto the normalized image plane
-  cv::Mat dist_coeff; // we started with the theoretical undistorted image
-  cv::undistortPoints(boundary, boundary, camera_matrix_, dist_coeff);
-
-  // Put points into homogeneous coordinates and project onto the image frame
-  std::vector<cv::Point3f> boundary_h; // homogeneous
-  std::vector<cv::Point2f> boundary_d; // distorted
-  cv::convertPointsToHomogeneous(boundary, boundary_h);
-  cv::projectPoints(boundary_h, cv::Vec3f(0,0,0), cv::Vec3f(0,0,0), camera_matrix_, dist_coeff_, boundary_d);
-
-  // Convert boundary to mat and create the mask by filling in a polygon defined by the boundary
-  cv::Mat boundary_mat(boundary_d);
-  boundary_mat.convertTo(boundary_mat, CV_32SC1);
-  dist_mask_ = cv::Mat(res, CV_8UC1, cv::Scalar(0));
-  cv::fillConvexPoly(dist_mask_, boundary_mat, cv::Scalar(1));
-
-  // Save boundary points for drawing boundary line
-  cv::Mat canny_output;
-  cv::Canny(dist_mask_, canny_output, 0, 2, 3);
-  cv::findContours(canny_output, contours_, hierarchy_, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, cv::Point(0,0));
-}
-
-
-bool FeatureTracker::getNewFeatures(cv::Mat img)
-{
-  // create mask around matched features with filled circles
-  cv::Mat mask;
-  dist_mask_.copyTo(mask);
-  static cv::Scalar color = 0;
-  static int thickness = -1; // negative means filled circle
-  for (auto& f : features_)
-    cv::circle(mask, f, min_feature_distance_, color, thickness);
-
-  // collect new features outside the mask
-  std::vector<cv::KeyPoint> new_keypoints;
-  detector_->detect(img, new_keypoints, mask);
-  if (new_keypoints.empty())
-  {
-    std::cout << "Feature detector is unable to find features!\n";
-    features_.clear();
-    feature_ids_.clear();
-    return false;
-  }
-
-  // keep best points with good separation from others
-  auto good_keypoints = chooseKeyPoints(new_keypoints, img.cols, img.rows);
-
-  // convert keypoints to point2f and assing labels
-  std::vector<cv::Point2f> new_features;
-  std::vector<int> new_feature_ids;
-  cv::KeyPoint::convert(good_keypoints, new_features);
-  for (int i = next_feature_id_; i < (next_feature_id_ + new_features.size()); i++)
-    new_feature_ids.push_back(i);
-
-  // increment the next feature id number
-  next_feature_id_ += new_features.size();
-
-  // add new features and corresponding labels into their respective containers
-  for (int i = 0; i < new_features.size(); ++i)
-  {
-    features_.push_back(new_features[i]);
-    feature_ids_.push_back(new_feature_ids[i]);
-  }
-
-  return true;
-}
-
-
-void FeatureTracker::trackerInit(cv::Mat img)
-{
-  if (!getNewFeatures(img)) return;
-  img_kf_ = img.clone();
-  features_kf_ = features_;
-  feature_ids_kf_ = feature_ids_;
-  img.copyTo(img_prev_);
-  if (show_image_)
-    plotFeatures(img.clone(), features_, feature_ids_);
-}
-
-
 void FeatureTracker::trackFeatures(cv::Mat img)
 {
   // When no features are currently tracked, detect features and establish keyframe
@@ -278,6 +183,101 @@ void FeatureTracker::trackFeatures(cv::Mat img)
 
   if (show_image_)
     plotFeatures(img.clone(), features_, feature_ids_);
+}
+
+
+void FeatureTracker::trackerInit(cv::Mat img)
+{
+  if (!getNewFeatures(img)) return;
+  img_kf_ = img.clone();
+  features_kf_ = features_;
+  feature_ids_kf_ = feature_ids_;
+  img.copyTo(img_prev_);
+  if (show_image_)
+    plotFeatures(img.clone(), features_, feature_ids_);
+}
+
+
+// Taken from visual_mtt2 and modified
+void FeatureTracker::createDistortionMask(cv::Size res)
+{
+  // Define undistorted image boundary
+  int num_ppe = 10; // number of points per edge
+  std::vector<cv::Point2f> boundary;
+  for (uint32_t i = 0; i < num_ppe; i++)
+    boundary.emplace_back(cv::Point2f(i*(res.width/num_ppe), 0)); // bottom
+  for (uint32_t i = 0; i < num_ppe; i++)
+    boundary.emplace_back(cv::Point2f(res.width, i*(res.height/num_ppe))); // right
+  for (uint32_t i = 0; i < num_ppe; i++)
+    boundary.emplace_back(cv::Point2f(res.width - i*(res.width/num_ppe), res.height)); // top
+  for (uint32_t i = 0; i < num_ppe; i++)
+    boundary.emplace_back(cv::Point2f(0, res.height - i*(res.height/num_ppe))); // left
+
+  // Project points onto the normalized image plane
+  cv::Mat dist_coeff; // we started with the theoretical undistorted image
+  cv::undistortPoints(boundary, boundary, camera_matrix_, dist_coeff);
+
+  // Put points into homogeneous coordinates and project onto the image frame
+  std::vector<cv::Point3f> boundary_h; // homogeneous
+  std::vector<cv::Point2f> boundary_d; // distorted
+  cv::convertPointsToHomogeneous(boundary, boundary_h);
+  cv::projectPoints(boundary_h, cv::Vec3f(0,0,0), cv::Vec3f(0,0,0), camera_matrix_, dist_coeff_, boundary_d);
+
+  // Convert boundary to mat and create the mask by filling in a polygon defined by the boundary
+  cv::Mat boundary_mat(boundary_d);
+  boundary_mat.convertTo(boundary_mat, CV_32SC1);
+  dist_mask_ = cv::Mat(res, CV_8UC1, cv::Scalar(0));
+  cv::fillConvexPoly(dist_mask_, boundary_mat, cv::Scalar(1));
+
+  // Save boundary points for drawing boundary line
+  cv::Mat canny_output;
+  cv::Canny(dist_mask_, canny_output, 0, 2, 3);
+  cv::findContours(canny_output, contours_, hierarchy_, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, cv::Point(0,0));
+}
+
+
+bool FeatureTracker::getNewFeatures(cv::Mat img)
+{
+  // create mask around matched features with filled circles
+  cv::Mat mask;
+  dist_mask_.copyTo(mask);
+  static cv::Scalar color = 0;
+  static int thickness = -1; // negative means filled circle
+  for (auto& f : features_)
+    cv::circle(mask, f, min_feature_distance_, color, thickness);
+
+  // collect new features outside the mask
+  std::vector<cv::KeyPoint> new_keypoints;
+  detector_->detect(img, new_keypoints, mask);
+  if (new_keypoints.empty())
+  {
+    std::cout << "Feature detector is unable to find features!\n";
+    features_.clear();
+    feature_ids_.clear();
+    return false;
+  }
+
+  // keep best points with good separation from others
+  auto good_keypoints = chooseKeyPoints(new_keypoints, img.cols, img.rows);
+
+  // convert keypoints to point2f and assing labels
+  std::vector<cv::Point2f> new_features;
+  std::vector<int> new_feature_ids;
+  cv::KeyPoint::convert(good_keypoints, new_features);
+  for (int i = next_feature_id_; i < (next_feature_id_ + new_features.size()); i++)
+    new_feature_ids.push_back(i);
+
+  // increment the next feature id number
+  next_feature_id_ += new_features.size();
+
+  // add new features and corresponding labels into their respective containers
+  for (int i = 0; i < new_features.size(); ++i)
+  {
+    features_.push_back(new_features[i]);
+    feature_ids_.push_back(new_feature_ids[i]);
+  }
+
+  return true;
 }
 
 
