@@ -5,7 +5,7 @@ project(feature_tracker)
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif(NOT CMAKE_BUILD_TYPE)
-set(CMAKE_CXX_FLAGS "-std=c++11 -mavx2 -mfma -fopenmp")
+set(CMAKE_CXX_FLAGS "-std=c++14 -mavx2 -mfma -fopenmp")
 
 find_package(OpenCV 3 REQUIRED)
 find_package(yaml-cpp REQUIRED)
