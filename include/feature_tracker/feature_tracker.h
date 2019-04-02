@@ -24,6 +24,8 @@ public:
 
   void load(const std::string& filename);
   void run(const cv::Mat& image);
+  inline const auto& getFeatures() const { return features_; }
+  inline const auto& getFeatureIds() const { return feature_ids_; }
 
 private:
 
